@@ -1,14 +1,15 @@
 
-
-
 /* general settings */
 body {
     font-family: 'Tahoma';
-    background-color: rgb(255, 255, 255);
-    color: rgb(0, 0, 0);
+    background-color: rgb(230, 230, 230);
+    color: rgb(50, 50, 50);
     margin: 0;
     padding: 0;
     margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 
@@ -43,7 +44,7 @@ nav ul li {
 
 nav ul li a {
     text-decoration: none;
-    color: rgba(255, 255, 255, 1.0);
+    color: rgb(230, 230, 230);
 }
 
 
@@ -79,6 +80,7 @@ p {
     line-height: 1.2;
     margin-top: 0px;
     margin-bottom: 0px;
+    color: rgb(70, 70, 70);
 }
 
 
@@ -104,4 +106,24 @@ p {
         justify-content: center;
         margin-top: 10px;
         line-height: 1.2;
+    }
+
+
+
+/*The footer settings*/
+.footer-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    border-top: 2.5px solid rgb(126, 32, 32);
+  }
+
+    .footer {
+        max-width: 960px;
+        margin: 0 auto;
+        background-color: rgb(230, 230, 230);
+        text-align: left;
+        padding: 10px 20px;
+        font-size: 14px;
     }

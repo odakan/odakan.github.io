@@ -10,6 +10,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 
@@ -81,6 +82,7 @@ p {
     margin-bottom: 0px;
     font-size: 14px;
     color: rgb(70, 70, 70);
+    text-align: justify;
 }
 
 
@@ -97,6 +99,7 @@ p {
     margin: 0 auto;
     padding: 15px; 
     box-sizing: border-box;
+    min-height: calc(100vh - 30px);
 }
 
     .profile-text {
@@ -106,7 +109,7 @@ p {
         justify-content: center;
         margin-top: 10px;
         line-height: 1.2;
-        padding-right: 95px;
+        padding-right: 80px;
     }
 
         .pub-list {
@@ -121,6 +124,7 @@ p {
             font-size: 0.9em;
             margin: 0 auto;
             margin-bottom: 15px;
+            text-align: justify;
         }
 
         .teach-list {
@@ -163,6 +167,7 @@ p {
             padding-bottom: 0;
             font-size: 13px;
             line-height: 1.2;
+            text-align: justify;
         }
 
     .profile-column {
@@ -237,11 +242,12 @@ p {
 
 /*The footer settings*/
 .footer-wrapper {
-    position: fixed;
+    position: relative;
     bottom: 0;
     left: 0;
     width: 100%;
     border-top: 2.5px solid rgb(126, 32, 32);
+    height: 30px;
   }
 
     .footer {

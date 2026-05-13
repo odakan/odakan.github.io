@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Course B - Liquefaction Modelling with OpenSees</title>
+        <meta name="description" content="Course B — Liquefaction Modelling with OpenSees. 5-day training in 3D solid FEM for geotechnical engineers.">
+        <meta property="og:title" content="Course B - Liquefaction Modelling with OpenSees">
+        <meta property="og:description" content="Course B — Liquefaction Modelling with OpenSees. 5-day training in 3D solid FEM for geotechnical engineers.">
+        <meta property="og:type" content="article">
+        <link rel="stylesheet" href="../style.css">
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    </head>
+    <body>
+        <nav>
+            <ul>
+                <li><a href="../index.html"><strong>Home</strong></a></li>
+                <li><a href="../about/main.html"><strong>About</strong></a></li>
+                <li><a href="../research/main.html"><strong>Research</strong></a></li>
+                <li><a href="main.html"><strong>Courses</strong></a></li>
+                <li><a href="../opensees/main.html"><strong>OpenSees Dev</strong></a></li>
+            </ul>
+        </nav>
+        <div class="container">
+            <section class="course-detail">
+                <a href="main.html" class="back-link">&larr; Back to all courses</a>
+                <h1>Course B &mdash; Liquefaction Modelling with OpenSees</h1>
+                <p class="course-meta">5 days &nbsp;|&nbsp; For geotechnical engineers in consultancies and research &nbsp;|&nbsp; English</p>
+
+                <h2>Overview</h2>
+                <p>This course provides a rigorous treatment of liquefaction modelling using OpenSees 3D solid finite elements. It is designed for geotechnical engineers who need to move beyond simplified empirical methods (SPT-based triggering charts) toward physics-based effective stress analysis that captures pore pressure generation, redistribution, and dissipation under cyclic loading. The course combines constitutive model theory with hands-on 3D model building and addresses the HPC requirements of large geotechnical solid models.</p>
+
+                <h2>Prerequisites</h2>
+                <p>Geotechnical engineering background, basic FEM understanding, Python or MATLAB basics.</p>
+
+                <h2>Software and Standards</h2>
+                <p><strong>Software:</strong> OpenSees (Tcl/Python), OpenSeesMP for parallelisation, Google Cloud Platform for large model runs, ParaView for visualisation</p>
+                <p><strong>Regulatory context:</strong> Eurocode 7/8 for SSI, offshore foundation standards, post-2023 Turkish seismic code</p>
+
+                <h2>Learning Objectives</h2>
+                <ul class="course-objectives">
+                    <li>Understand effective stress principles and the mechanics of pore pressure generation under cyclic loading</li>
+                    <li>Implement and calibrate cyclic constitutive models for liquefiable sands (PDMY, PIMY, PM4Sand class models)</li>
+                    <li>Build 3D solid FEM models in OpenSees with appropriate boundary conditions and drainage conditions</li>
+                    <li>Apply seismic input motions correctly to soil column and 3D models (compliant base, rigid base, domain reduction)</li>
+                    <li>Interpret pore pressure ratio, settlement, and lateral spreading outputs</li>
+                    <li>Validate models against centrifuge and field case study data</li>
+                    <li>Run large models in parallel using OpenSeesMP on Google Cloud Platform</li>
+                </ul>
+
+                <h2>Daily Schedule</h2>
+                <table class="schedule-table">
+                    <thead>
+                        <tr><th>Day</th><th>Topics</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Day 1</td><td>Effective stress framework, Terzaghi consolidation recap, cyclic shear stress ratio, triggering mechanisms. Introduction to OpenSees solid element architecture and u-p formulation.</td></tr>
+                        <tr><td>Day 2</td><td>Constitutive models for liquefiable soils: PDMY02, PIMY, and PM4Sand family. Calibration strategy from laboratory data. Hands-on model calibration exercises.</td></tr>
+                        <tr><td>Day 3</td><td>3D soil column model: mesh generation, element assignment, boundary conditions, drainage options, gravity consolidation procedure. Free-field response validation.</td></tr>
+                        <tr><td>Day 4</td><td>Full 3D liquefaction model: lateral spreading, structure-soil interaction, pore pressure redistribution. Seismic input application methods. Result extraction and visualisation with ParaView.</td></tr>
+                        <tr><td>Day 5</td><td>Case studies: centrifuge test validation, field performance case history. HPC deployment: compiling OpenSeesMP, mesh partitioning with METIS, running on GCP, cost management.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+        <div class="footer-wrapper">
+            <footer class="footer">
+                &copy; 2026 Onur Deniz Akan. All rights reserved.
+            </footer>
+        </div>
+    </body>
+</html>

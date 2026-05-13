@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="IMPL-EX integration scheme for finite element analysis — a practical third option between implicit and explicit methods for earthquake engineers dealing with contact and material softening.">
+        <meta property="og:title" content="The Good, the Bad, and the IMPL-EX">
+        <meta property="og:description" content="IMPL-EX integration scheme for finite element analysis — a practical third option between implicit and explicit methods for earthquake engineers.">
+        <meta property="og:type" content="article">
+        <title>The Good, the Bad, and the IMPL-EX - Onur Deniz Akan</title>
+        <link rel="stylesheet" href="../style.css">
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <script>
+            MathJax = {
+                tex: {
+                    inlineMath: [['\\(', '\\)']],
+                    displayMath: [['\\[', '\\]']],
+                    tags: 'ams'
+                },
+                svg: { fontCache: 'global' }
+            };
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+    </head>
+    <body>
+        <nav>
+            <ul>
+                <li><a href="../index.html"><strong>Home</strong></a></li>
+                <li><a href="../about/main.html"><strong>About</strong></a></li>
+                <li><a href="main.html"><strong>Research</strong></a></li>
+                <li><a href="../courses/main.html"><strong>Courses</strong></a></li>
+                <li><a href="../opensees/main.html"><strong>OpenSees Dev</strong></a></li>
+            </ul>
+        </nav>
+        <div class="container">
+            <article class="article">
+                <a href="main.html" class="back-link">&larr; Back to Research</a>
+
+                <h1>The Good, the Bad, and the IMPL-EX</h1>
+                <p class="subtitle">A practical guide to the integration scheme that saved my simulation</p>
+                <p class="byline">Onur Deniz Akan &middot; 2026</p>
+
+                <!-- TABLE OF CONTENTS -->
+                <nav class="toc">
+                    <h3>Contents</h3>
+                    <ol>
+                        <li><a href="#the-problem">The 3 AM crash: why your contact simulation diverges</a></li>
+                        <li><a href="#implicit">The Bad: implicit integration and Newton&ndash;Raphson</a></li>
+                        <li><a href="#explicit">The Ugly: explicit integration</a></li>
+                        <li><a href="#implex">The Good: IMPL-EX &mdash; the idea</a></li>
+                        <li><a href="#algorithm">The algorithm, step by step</a></li>
+                        <li><a href="#toy-model">Toy model: seeing it in action</a></li>
+                        <li><a href="#contact">IMPL-EX for contact</a></li>
+                        <li><a href="#limitations">When NOT to use IMPL-EX</a></li>
+                        <li><a href="#example">A real example: seismic pounding in masonry</a></li>
+                        <li><a href="#try-it">Where to go from here</a></li>
+                    </ol>
+                </nav>
+
+                <!-- 1 -->
+                <h2 id="the-problem">1. The 3 AM crash: why your contact simulation diverges</h2>
+
+                <p>You've set up your model. Meshed the geometry, calibrated the materials, written the input file. You launch the analysis, go to sleep, and at 3 AM the solver quits: <em>"Newton&ndash;Raphson failed to converge."</em></p>
+
+                <p>If you work in earthquake engineering, you've been there. The culprit is almost always the same: <strong>contact</strong>, <strong>softening</strong>, or both at once. The tangent stiffness matrix goes singular, the iterative solver chokes, and your 20-second earthquake record dies at second 8.</p>
+
+                <p>This post is about a scheme that fixes this. It's called <strong>IMPL-EX</strong> (IMPLicit-EXplicit), it was introduced by <a href="https://doi.org/10.1016/j.cma.2007.09.027">Oliver et al. (2008)</a>, and it deserves to be more widely known among earthquake engineers. Let me walk you through the math.</p>
+
+                <!-- 2 -->
+                <h2 id="implicit">2. The Bad: implicit integration and Newton&ndash;Raphson</h2>
+
+                <p>In the standard implicit approach, we solve a nonlinear system of equations at every load (or time) step. Given external forces \(\mathbf{f}_{\mathrm{ext}}\) and a displacement vector \(\mathbf{u}\), equilibrium demands:</p>
+
+                \[\mathbf{R}(\mathbf{u}) \;=\; \mathbf{f}_{\mathrm{int}}(\mathbf{u}) - \mathbf{f}_{\mathrm{ext}} \;=\; \mathbf{0}\]
+
+                <p>We solve this with Newton&ndash;Raphson iteration. At each iteration \(k\):</p>
+
+                \[\mathbf{K}_T^{(k)} \, \Delta\mathbf{u}^{(k)} = -\mathbf{R}^{(k)} \qquad\text{where}\quad \mathbf{K}_T = \frac{\partial \mathbf{f}_{\mathrm{int}}}{\partial \mathbf{u}}\]
+
+                <p>Update \(\mathbf{u}^{(k+1)} = \mathbf{u}^{(k)} + \Delta\mathbf{u}^{(k)}\), repeat until \(\|\mathbf{R}\| < \text{tol}\).</p>
+
+                <p>This works beautifully&mdash;as long as \(\mathbf{K}_T\) stays well-conditioned. But consider what happens at a <strong>contact interface</strong>: when two surfaces collide, the penalty stiffness jumps from zero to \(10^8\) in one step. Or in a <strong>softening material</strong> (masonry, concrete), the tangent goes negative. In either case, the condition number of \(\mathbf{K}_T\) collapses, and Newton&ndash;Raphson diverges.</p>
+
+                <div class="highlight">
+                    <p><strong>The cruel irony:</strong> the implicit method gives up precisely at the moments that matter most in earthquake engineering&mdash;impact, cracking, crushing.</p>
+                </div>
+
+                <details>
+                    <summary>Why does the tangent go singular at contact? (expand)</summary>
+                    <p>Consider a penalty-based normal contact law: \(f_N = k_N \, g_N\) when \(g_N < 0\) (penetration), and \(f_N = 0\) when \(g_N \geq 0\) (gap open). The tangent \(\partial f_N / \partial g_N\) jumps discontinuously between \(k_N\) and \(0\) at the contact boundary. This discontinuity means the linearization used in Newton&ndash;Raphson is not valid in a neighborhood of the transition&mdash;the solver oscillates between open and closed states without converging.</p>
+                    <p>Worse: if contact opens and closes repeatedly within a single step (chatter), the tangent matrix changes at every iteration, and the convergence radius shrinks to zero.</p>
+                </details>
+
+                <!-- 3 -->
+                <h2 id="explicit">3. The Ugly: explicit integration</h2>
+
+                <p>The alternative is explicit time integration (e.g., central differences). No system of equations to solve&mdash;just a forward march:</p>
+
+                \[\mathbf{u}_{n+1} = 2\mathbf{u}_n - \mathbf{u}_{n-1} + \Delta t^2 \, \mathbf{M}^{-1} \left(\mathbf{f}_{\mathrm{ext},n} - \mathbf{f}_{\mathrm{int},n}\right)\]
+
+                <p>No tangent matrix, no iterations, no convergence failures. So what's the problem?</p>
+
+                <p><strong>Conditional stability.</strong> The critical time step is:</p>
+
+                \[\Delta t_{\mathrm{crit}} = \frac{2}{\omega_{\max}} \approx \frac{h_{\min}}{c}\]
+
+                <p>where \(h_{\min}\) is the smallest element size and \(c\) is the wave speed in the material. For a masonry building with 20&nbsp;mm mesh elements and \(c \approx 2000\) m/s, this gives \(\Delta t_{\mathrm{crit}} \approx 10^{-5}\) s. A 20-second earthquake requires <strong>2 million steps</strong>. Each step is cheap, but two million of them on a 3D building model? Impractical.</p>
+
+                <table class="schedule-table">
+                    <thead>
+                        <tr><th>Property</th><th>Implicit (NR)</th><th>Explicit</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>System solve per step</td><td>Yes (iterative)</td><td>No (lumped mass)</td></tr>
+                        <tr><td>Stability</td><td>Unconditional</td><td>Conditional (\(\Delta t < \Delta t_{\mathrm{crit}}\))</td></tr>
+                        <tr><td>Typical \(\Delta t\)</td><td>\(10^{-3}\)&ndash;\(10^{-2}\) s</td><td>\(10^{-6}\)&ndash;\(10^{-5}\) s</td></tr>
+                        <tr><td>Contact / softening</td><td>Diverges</td><td>Handles naturally</td></tr>
+                        <tr><td>Large 3D models</td><td>Feasible (few steps)</td><td>Impractical (millions of steps)</td></tr>
+                    </tbody>
+                </table>
+
+                <p>We're stuck. Implicit can't handle the physics, explicit can't handle the cost. Is there a third option?</p>
+
+                <!-- 4 -->
+                <h2 id="implex">4. The Good: IMPL-EX &mdash; the idea</h2>
+
+                <p>The key insight of Oliver et al. (2008) is simple once you see it:</p>
+
+                <div class="highlight">
+                    <p><strong>The IMPL-EX idea:</strong> Don't solve the nonlinear constitutive equations during the global equilibrium iteration. Instead, <em>extrapolate</em> the internal variables from previous converged steps, solve a <em>linear</em> system, and <em>correct</em> the constitutive response after convergence.</p>
+                </div>
+
+                <p>Let's make this precise. In a standard implicit scheme, the stress at a Gauss point depends on the current strain through the constitutive law:</p>
+
+                \[\boldsymbol{\sigma}_{n+1} = \boldsymbol{\sigma}\!\left(\boldsymbol{\varepsilon}_{n+1},\, \boldsymbol{\alpha}_{n+1}\right)\]
+
+                <p>where \(\boldsymbol{\alpha}\) represents internal variables (damage, plastic strain, hardening variables, etc.). The problem is that \(\boldsymbol{\alpha}_{n+1}\) depends on \(\boldsymbol{\varepsilon}_{n+1}\), which depends on \(\mathbf{u}_{n+1}\), which is what we're trying to find. This circular dependency is what makes the problem nonlinear.</p>
+
+                <p>IMPL-EX breaks the circle. Instead of solving for \(\boldsymbol{\alpha}_{n+1}\) simultaneously, it <strong>extrapolates</strong>:</p>
+
+                \[\widetilde{\boldsymbol{\alpha}}_{n+1} = \boldsymbol{\alpha}_n + \frac{\Delta t_{n+1}}{\Delta t_n} \left(\boldsymbol{\alpha}_n - \boldsymbol{\alpha}_{n-1}\right)\]
+
+                <p class="eq-note">For equal time steps, this simplifies to \(\widetilde{\boldsymbol{\alpha}}_{n+1} = 2\boldsymbol{\alpha}_n - \boldsymbol{\alpha}_{n-1}\).</p>
+
+                <p>With \(\widetilde{\boldsymbol{\alpha}}_{n+1}\) fixed (known from previous steps), the stress becomes a <em>linear</em> function of strain. The tangent matrix is constant, symmetric, and positive semi-definite. Newton&ndash;Raphson converges in <strong>exactly one iteration</strong>.</p>
+
+                <p>After the linear solve gives us \(\mathbf{u}_{n+1}\), we go back and evaluate the <em>true</em> constitutive response to get the corrected \(\boldsymbol{\alpha}_{n+1}\) and \(\boldsymbol{\sigma}_{n+1}\). These corrected values sit on the real constitutive curve and are stored for the next extrapolation.</p>
+
+                <!-- 5 -->
+                <h2 id="algorithm">5. The algorithm, step by step</h2>
+
+                <div class="algorithm-box">
+                    <h4>Algorithm: IMPL-EX integration at step \(n+1\)</h4>
+                    <p><strong>Given:</strong> converged states at steps \(n\) and \(n-1\) with internal variables \(\boldsymbol{\alpha}_n\), \(\boldsymbol{\alpha}_{n-1}\) and secant stiffness \(\kappa_n\).</p>
+                    <ol>
+                        <li><span class="step-label">Extrapolate.</span> Compute the predicted internal variables: \[\widetilde{\boldsymbol{\alpha}}_{n+1} = 2\boldsymbol{\alpha}_n - \boldsymbol{\alpha}_{n-1}\] This defines an extrapolated tangent (or secant) stiffness \(\widetilde{\mathbf{K}}_{n+1}\) that is <em>constant</em>&mdash;it does not depend on the unknown \(\mathbf{u}_{n+1}\).</li>
+                        <li><span class="step-label">Linear solve.</span> Solve the linearized equilibrium: \[\widetilde{\mathbf{K}}_{n+1} \, \Delta\mathbf{u} = \mathbf{f}_{\mathrm{ext},n+1} - \mathbf{f}_{\mathrm{int}}\!\left(\mathbf{u}_n\right)\] This is a single linear system&mdash;one factorization, one back-substitution, done. No iterations.</li>
+                        <li><span class="step-label">Correct.</span> With \(\mathbf{u}_{n+1} = \mathbf{u}_n + \Delta\mathbf{u}\) now known, evaluate the <em>true</em> constitutive response: \[\boldsymbol{\sigma}_{n+1} = \boldsymbol{\sigma}\!\left(\boldsymbol{\varepsilon}_{n+1},\, \boldsymbol{\alpha}_{n+1}^{\text{true}}\right)\] Store \(\boldsymbol{\alpha}_{n+1}^{\text{true}}\) for the next extrapolation. The corrected stress sits on the real constitutive curve.</li>
+                    </ol>
+                </div>
+
+                <p>The beauty is in step 2. Because the tangent is constant:</p>
+                <ul>
+                    <li>It is always <strong>symmetric positive semi-definite</strong> (no negative tangents from softening).</li>
+                    <li>Newton&ndash;Raphson converges in <strong>one iteration</strong> by construction.</li>
+                    <li>There is no chatter, no divergence, no bisection of load steps.</li>
+                </ul>
+
+                <p>The price is that equilibrium is only <em>approximately</em> satisfied at each step&mdash;there is a residual of order \(O(\Delta t)\). But the corrected internal variables are exact (on the constitutive curve), and the error decreases as \(\Delta t \to 0\).</p>
+
+                <details>
+                    <summary>Accuracy order and error bound (expand)</summary>
+                    <p>Oliver et al. (2008) prove that the IMPL-EX scheme is <strong>first-order accurate</strong> in \(\Delta t\), the same order as backward Euler. The global error in displacement satisfies:</p>
+                    \[\|\mathbf{u}^{\text{impl-ex}} - \mathbf{u}^{\text{exact}}\| \leq C \, \Delta t\]
+                    <p>where \(C\) depends on the smoothness of the loading and the constitutive response. In practice, the error is often smaller than this bound because the extrapolation is good when the internal variables evolve smoothly&mdash;which they do for most of the analysis.</p>
+                    <p>The scheme is <strong>not</strong> unconditionally stable. There is a critical \(\Delta t\) beyond which the extrapolation overshoots and the scheme diverges. However, this critical step is typically orders of magnitude larger than the explicit \(\Delta t_{\mathrm{crit}}\), because it depends on the rate of change of internal variables rather than the wave speed.</p>
+                </details>
+
+                <!-- 6 -->
+                <h2 id="toy-model">6. Toy model: seeing it in action</h2>
+
+                <p>Theory is one thing. Let's watch it work.</p>
+
+                <p>Consider a system of two springs in series, fixed at one end, with a prescribed displacement \(u_{\mathrm{app}}\) at the other. Spring 1 has a nonlinear constitutive law with softening:</p>
+
+                \[\sigma_1(\varepsilon) = 150\,\varepsilon\, e^{-0.5\varepsilon^2} + 60\, e^{-3(\varepsilon - 3)^2}\]
+
+                <p>Spring 2 is linear: \(\sigma_2 = K_2 \, (u_{\mathrm{app}} - u_1)\), with \(K_2 = 100\). Equilibrium at the internal node requires \(\sigma_1(u_1) = K_2(u_{\mathrm{app}} - u_1)\).</p>
+
+                <p>Watch what happens at each step:</p>
+                <ul>
+                    <li><strong>Implicit</strong>: Newton&ndash;Raphson iterates toward equilibrium. In the softening zone the tangent \(d\sigma_1/d\varepsilon\) becomes small, so convergence slows&mdash;sometimes requiring 5+ iterations per step. It gets there, but expensively.</li>
+                    <li><strong>Explicit</strong>: one step using the tangent from the previous converged state. Fast, but the solution drifts off the equilibrium path because there's no correction. The residual accumulates.</li>
+                    <li><strong>IMPL-EX</strong>: extrapolates the secant stiffness \(\tilde{\kappa}\), solves a single linear equation, then corrects back onto the constitutive curve. One "iteration" per step, and the solution tracks the exact path closely.</li>
+                </ul>
+
+                <details>
+                    <summary>The IMPL-EX math for the toy model (expand)</summary>
+                    <p>In the toy model, the "internal variable" is the secant stiffness:</p>
+                    \[\kappa_n = \frac{\sigma_1(u_{1,n})}{u_{1,n}}\]
+                    <p><strong>Step 1 &mdash; Extrapolate:</strong></p>
+                    \[\widetilde{\kappa}_{n+1} = 2\kappa_n - \kappa_{n-1}\]
+                    <p><strong>Step 2 &mdash; Linear solve:</strong> equilibrium with the extrapolated stiffness is:</p>
+                    \[\widetilde{\kappa}_{n+1} \cdot u_1 = K_2 (u_{\mathrm{app}} - u_1) \quad\Longrightarrow\quad u_1 = \frac{K_2 \, u_{\mathrm{app}}}{\widetilde{\kappa}_{n+1} + K_2}\]
+                    <p><strong>Step 3 &mdash; Correct:</strong></p>
+                    \[\sigma_{1,n+1} = \sigma_1(u_1) \qquad \kappa_{n+1} = \frac{\sigma_{1,n+1}}{u_1}\]
+                    <p>The corrected point \((u_1, \sigma_{1,n+1})\) lies exactly on the constitutive curve. The displacement \(u_1\) is approximate (linear solve), but the stress is exact for that displacement.</p>
+                </details>
+
+                <!-- 7 -->
+                <h2 id="contact">7. IMPL-EX for contact</h2>
+
+                <p>The toy model demonstrates IMPL-EX for material nonlinearity. But what about <strong>contact</strong>&mdash;the other major source of convergence headaches?</p>
+
+                <p>In a penalty-based contact formulation, the contact traction depends on the gap function \(g_N\) and a contact projector \(p_c\) that indicates whether the surfaces are in contact:</p>
+
+                \[f_N = \begin{cases} k_N \, |g_N| & \text{if } g_N < 0 \;\;(\text{penetration}) \\ 0 & \text{if } g_N \geq 0 \;\;(\text{open}) \end{cases}\]
+
+                <p>The projector \(p_c\) is the binary indicator: \(p_c = 1\) if in contact, \(p_c = 0\) if open. In the standard implicit approach, \(p_c\) is evaluated at every iteration, causing the tangent matrix to change structure mid-iteration&mdash;this is the origin of contact <em>chatter</em>.</p>
+
+                <h3>The IMPL-EX treatment</h3>
+
+                <p>The internal variables for contact are the gap \(g_N\) (and tangential slip \(g_T\) for friction). We extrapolate these:</p>
+
+                \[\widetilde{g}_{N,n+1} = 2\,g_{N,n} - g_{N,n-1}\]
+
+                <p>But there's a subtlety: <strong>the contact projector \(p_c\) is not extrapolated</strong>. It is binary-valued (0 or 1), and linear extrapolation of a discrete indicator is meaningless. Instead, \(p_c\) is <strong>frozen</strong> from the last converged step:</p>
+
+                \[\widetilde{p}_{c,n+1} = p_{c,n}\]
+
+                <div class="highlight">
+                    <p><strong>Why freeze \(p_c\)?</strong> If contact was active at step \(n\), the IMPL-EX scheme assumes it remains active during the linear solve at step \(n+1\). The correction step then evaluates the true gap and updates \(p_c\) for the next step. This eliminates chatter entirely: the contact state can only change between steps, not within iterations.</p>
+                </div>
+
+                <p>With the frozen projector and extrapolated gap, the contact stiffness contribution is constant during the solve. The global tangent matrix remains symmetric and well-conditioned. After the solve, the true gap is computed, the true contact forces are evaluated, and the corrected state is stored.</p>
+
+                <details>
+                    <summary>Friction: Coulomb with IMPL-EX (expand)</summary>
+                    <p>For Coulomb friction, the tangential traction is:</p>
+                    \[f_T = \begin{cases} k_T \, g_T & \text{if } |f_T| \leq \mu \, f_N \;\;(\text{stick}) \\ \mu \, f_N \, \mathrm{sign}(g_T) & \text{if } |f_T| > \mu \, f_N \;\;(\text{slip}) \end{cases}\]
+                    <p>The stick/slip transition is another discrete state change that causes chatter in implicit schemes. In IMPL-EX, the slip state is frozen from the previous converged step, and the tangential slip \(g_T\) is extrapolated. The friction contribution to the tangent is therefore constant during the solve.</p>
+                </details>
+
+                <!-- 8 -->
+                <h2 id="limitations">8. When NOT to use IMPL-EX</h2>
+
+                <p>IMPL-EX is not a silver bullet. Intellectual honesty requires listing its limitations:</p>
+
+                <div class="warning">
+                    <ul>
+                        <li><strong>First-order accuracy.</strong> The global error is \(O(\Delta t)\). If you need high-accuracy results (energy balance, long-duration creep), you may need very small time steps, partially defeating the purpose.</li>
+                        <li><strong>Conditional stability.</strong> There <em>is</em> a critical \(\Delta t\). It's much larger than the explicit one, but it exists and requires a sensitivity study. If the internal variables evolve rapidly (sudden brittle failure), the extrapolation can overshoot.</li>
+                        <li><strong>Energy drift.</strong> Because equilibrium is only approximately satisfied, there is a small energy error at each step. Over many cycles (e.g., long earthquake records), this can accumulate. Monitor the energy balance.</li>
+                        <li><strong>Not needed when implicit works.</strong> If your problem converges fine with Newton&ndash;Raphson (e.g., no contact, mild nonlinearity), standard implicit is more accurate at the same \(\Delta t\). Don't fix what isn't broken.</li>
+                        <li><strong>Not a replacement for explicit in wave propagation.</strong> If you genuinely need to resolve stress waves (blast, impact at microsecond scale), explicit is the right tool.</li>
+                    </ul>
+                </div>
+
+                <table class="schedule-table">
+                    <thead>
+                        <tr><th>Property</th><th>Implicit (NR)</th><th>Explicit</th><th>IMPL-EX</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Iterations per step</td><td>3&ndash;20+</td><td>0</td><td>1</td></tr>
+                        <tr><td>Tangent matrix</td><td>Recomputed each iter</td><td>Not needed (lumped \(\mathbf{M}\))</td><td>Constant per step</td></tr>
+                        <tr><td>Stability</td><td>Unconditional</td><td>Conditional (wave speed)</td><td>Conditional (internal var. rate)</td></tr>
+                        <tr><td>Accuracy</td><td>Exact equilibrium</td><td>1st order</td><td>1st order</td></tr>
+                        <tr><td>Contact / softening</td><td>Diverges</td><td>OK</td><td>OK</td></tr>
+                        <tr><td>Typical \(\Delta t\)</td><td>\(10^{-3}\) s</td><td>\(10^{-6}\) s</td><td>\(10^{-3}\) s</td></tr>
+                        <tr><td>Best for</td><td>Smooth nonlinearity</td><td>Wave propagation, small models</td><td>Contact, softening, large models</td></tr>
+                    </tbody>
+                </table>
+
+                <!-- 9 -->
+                <h2 id="example">9. A real example: seismic pounding in masonry</h2>
+
+                <p>To give you a sense of what IMPL-EX enables in practice: we used it to simulate the SERA-AIMS shaking table test&mdash;two half-scale rubble stone masonry building units separated by a dry joint, subjected to the Montenegro 1979 earthquake record.</p>
+
+                <p>The model includes a damage-plasticity material (ASDConcrete3D) for the masonry and penalty-based contact elements at the joint. Both the material and the contact use IMPL-EX integration.</p>
+
+                <p>The result: <strong>20 seconds of earthquake simulation in ~90 minutes</strong>, with \(\Delta t = 0.00125\) s, a single iteration per step, and zero convergence failures. A standard implicit scheme failed to converge beyond 8 seconds with the same time step.</p>
+
+                <!-- 10 -->
+                <h2 id="try-it">10. Where to go from here</h2>
+
+                <p>If you want to try IMPL-EX yourself:</p>
+                <ul>
+                    <li>The formulation is implemented in <strong><a href="https://opensees.berkeley.edu/">OpenSees</a></strong> via the ASDConcrete3D material and a custom contact element. It's open source.</li>
+                    <li>The original paper by <a href="https://doi.org/10.1016/j.cma.2007.09.027">Oliver et al. (2008)</a> is the definitive reference. Read Section 3 for the algorithm and Section 5 for the convergence proof.</li>
+                    <li>For contact applications, see Oliver et al. (<a href="https://doi.org/10.1002/nme.2806">2009</a>) which extends IMPL-EX to frictional contact.</li>
+                </ul>
+
+                <p>The scheme is simple to implement&mdash;if you already have a standard implicit code, the changes are localized to the constitutive update routine. You keep your global solver, your element library, your post-processing. You just change <em>how</em> the stress is computed at each Gauss point.</p>
+
+                <p>For earthquake engineers: this is a practical tool. Not a theoretical curiosity, not a niche method for one specific problem. It works for contact, for softening, for cyclic loading, for dynamics. It let me sleep through the night while my simulation ran to completion. Maybe it can do the same for you.</p>
+
+                <!-- References -->
+                <ol class="references">
+                    <h2>References</h2>
+                    <li>Oliver, J., Huespe, A.E., and Cante, J.C. (2008). "An implicit/explicit integration scheme to increase computability of non-linear material and contact/friction problems." <em>Computer Methods in Applied Mechanics and Engineering</em>, 197(21&ndash;24), 1865&ndash;1889. <a href="https://doi.org/10.1016/j.cma.2007.09.027">doi:10.1016/j.cma.2007.09.027</a></li>
+                    <li>Oliver, J., Huespe, A.E., and Cante, J.C. (2009). "Implicit/explicit integration of coupled thermo-mechanical contact problems." <em>International Journal for Numerical Methods in Engineering</em>. <a href="https://doi.org/10.1002/nme.2806">doi:10.1002/nme.2806</a></li>
+                </ol>
+
+            </article>
+        </div>
+        <div class="footer-wrapper">
+            <footer class="footer">
+                &copy; 2026 Onur Deniz Akan. All rights reserved.
+            </footer>
+        </div>
+    </body>
+</html>

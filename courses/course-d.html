@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Course D - OpenSees Developer: Constitutive Models, Elements and HPC</title>
+        <meta name="description" content="Course D — OpenSees Developer: Constitutive Models, Elements and HPC. 10-day advanced course for PhD students and postdocs.">
+        <meta property="og:title" content="Course D - OpenSees Developer">
+        <meta property="og:description" content="Course D — OpenSees Developer: Constitutive Models, Elements and HPC. 10-day advanced course for PhD students and postdocs.">
+        <meta property="og:type" content="article">
+        <link rel="stylesheet" href="../style.css">
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    </head>
+    <body>
+        <nav>
+            <ul>
+                <li><a href="../index.html"><strong>Home</strong></a></li>
+                <li><a href="../about/main.html"><strong>About</strong></a></li>
+                <li><a href="../research/main.html"><strong>Research</strong></a></li>
+                <li><a href="main.html"><strong>Courses</strong></a></li>
+                <li><a href="../opensees/main.html"><strong>OpenSees Dev</strong></a></li>
+            </ul>
+        </nav>
+        <div class="container">
+            <section class="course-detail">
+                <a href="main.html" class="back-link">&larr; Back to all courses</a>
+                <h1>Course D &mdash; OpenSees Developer: Constitutive Models, Elements and HPC</h1>
+                <p class="course-meta">10 days (2 weeks) &nbsp;|&nbsp; For PhD students and postdocs &nbsp;|&nbsp; English</p>
+
+                <h2>Overview</h2>
+                <p>This is the flagship university course and the most technically advanced offering in the portfolio. It takes PhD students and postdocs from OpenSees user to OpenSees contributor &mdash; capable of implementing novel constitutive models and elements in C++, integrating them into the OpenSees framework, and deploying them at scale using OpenSeesMP on HPC infrastructure. There is no comparable course available in Europe: OpenSees documentation for developers is notoriously sparse, and the knowledge required to navigate and extend the codebase is typically acquired only through years of trial and error. This course compresses that learning into two structured weeks.</p>
+
+                <p>The pedagogical structure is deliberately layered: Week 1 uses Python to build intuition for constitutive model mathematics without the distraction of C++ syntax and compilation errors. Students implement return mapping algorithms, consistent tangent operators, and IMPL-EX integration from scratch in Python, verify them against analytical solutions, and develop a complete understanding of what the code must do before they write a single line of C++. Week 2 then translates this understanding into OpenSees C++ &mdash; students port their Python models into the NDMaterial interface, implement elements, and culminate in compiling OpenSeesMP, partitioning models with METIS, and running distributed jobs on Google Cloud Platform.</p>
+
+                <h2>Prerequisites</h2>
+                <p>Python proficiency (required), continuum mechanics fundamentals (required), OpenSees user experience (required), C++ basics (helpful but not required &mdash; Week 1 provides the bridge).</p>
+
+                <h2>Software</h2>
+                <p><strong>Software:</strong> Python (NumPy, SciPy, Matplotlib), OpenSees source code, CMake, GCC/Clang, VS Code or CLion, OpenSeesMP, METIS, Google Cloud Platform</p>
+
+                <h2>Learning Objectives</h2>
+                <ul class="course-objectives">
+                    <li>Understand OpenSees codebase architecture: class hierarchy, object model, build system, module structure</li>
+                    <li>Implement elastoplastic constitutive models from scratch in Python: yield surface, flow rule, hardening, return mapping</li>
+                    <li>Derive and implement the consistent algorithmic tangent operator for implicit analysis</li>
+                    <li>Implement IMPL-EX integration and understand its stability and accuracy trade-offs versus fully implicit integration</li>
+                    <li>Port a Python constitutive model into the OpenSees NDMaterial C++ interface</li>
+                    <li>Implement a finite element from scratch in C++: residual vector, stiffness matrix, consistent tangent, material interface</li>
+                    <li>Debug and validate custom implementations using patch tests and convergence studies</li>
+                    <li>Compile OpenSeesMP with MPI support, partition FEM meshes using METIS, and deploy parallel jobs on GCP</li>
+                </ul>
+
+                <h2>Week 1 &mdash; Theory and Python Implementation</h2>
+                <p>Each day: theory session in the morning (2.5&ndash;3 hours), hands-on Python coding session in the afternoon (3&ndash;3.5 hours). All Python implementations use NumPy and SciPy only &mdash; no FEM libraries &mdash; so students see every algorithmic detail.</p>
+
+                <table class="schedule-table">
+                    <thead>
+                        <tr><th>Day</th><th>Focus</th><th>Morning &mdash; Theory</th><th>Afternoon &mdash; Coding</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Day 1</td><td>Continuum mechanics</td><td>Stress and strain tensors, objectivity, corotational framework, Voigt notation, spectral decomposition</td><td>Python: tensor operations class, stress-strain curve generator, material state data structure</td></tr>
+                        <tr><td>Day 2</td><td>Elastoplasticity</td><td>Yield surface geometry, associated and non-associated flow rules, isotropic and kinematic hardening, loading/unloading conditions, consistency condition</td><td>Python: von Mises model with isotropic hardening, return mapping algorithm (radial return), stress update verification</td></tr>
+                        <tr><td>Day 3</td><td>Consistent tangent</td><td>Algorithmic vs continuum tangent, derivation of consistent tangent for von Mises model, quadratic convergence with Newton-Raphson</td><td>Python: tangent derivation, finite-difference verification, patch test at material point level</td></tr>
+                        <tr><td>Day 4</td><td>Cyclic models</td><td>Kinematic hardening (Armstrong-Frederick), combined hardening, Masing rules, soil-specific cyclic behaviour, pore pressure generation coupling</td><td>Python: cyclic constitutive model, hysteresis loop generation, comparison with experimental data</td></tr>
+                        <tr><td>Day 5</td><td>IMPL-EX</td><td>Motivation: stability vs accuracy, IMPL-EX algorithm derivation, error estimation, adaptive switching strategy, comparison with implicit integration</td><td>Python: IMPL-EX implementation of Day 2 model, side-by-side comparison with implicit, accuracy and stability parameter study</td></tr>
+                    </tbody>
+                </table>
+
+                <h2>Week 2 &mdash; C++ Implementation and HPC Deployment</h2>
+                <p>Each day: conceptual/architectural session in the morning, C++ coding session in the afternoon. By Day 7, students are porting their own Week 1 Python model into C++. By Day 10, they are running it in parallel on Google Cloud.</p>
+
+                <table class="schedule-table">
+                    <thead>
+                        <tr><th>Day</th><th>Focus</th><th>Morning &mdash; Theory</th><th>Afternoon &mdash; Coding</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Day 6</td><td>OpenSees architecture</td><td>Codebase structure, class hierarchy (Domain, Element, Material, Node, Integrator, Algorithm), build system with CMake, how to add a new class, UniaxialMaterial vs NDMaterial interfaces</td><td>Navigate OpenSees source, compile from scratch, run a reference model via command line, locate relevant source files for NDMaterial</td></tr>
+                        <tr><td>Day 7</td><td>NDMaterial in C++</td><td>NDMaterial interface: setTrialStrain, getStress, getTangent, commitState, revertToLastCommit, revertToStart. State variable management, serialisation (sendSelf/receiveSelf)</td><td>Port the Week 1 von Mises Python model into a C++ NDMaterial. Compile, link, test against Python reference</td></tr>
+                        <tr><td>Day 8</td><td>Element formulation</td><td>8-node brick element: shape functions, numerical integration (Gauss quadrature), residual vector, stiffness matrix assembly, material point loop, geometric nonlinearity basics</td><td>Implement a simplified brick element in C++ connected to the custom NDMaterial. Run a single-element patch test</td></tr>
+                        <tr><td>Day 9</td><td>Debugging and validation</td><td>Convergence testing strategy, patch test requirements, debugging tools (GDB, Valgrind basics), numerical stability checks, common failure modes in constitutive implementations</td><td>Full debugging session: identify and fix bugs in Day 7&ndash;8 implementations, run patch test suite, verify quadratic convergence</td></tr>
+                        <tr><td>Day 10</td><td>OpenSeesMP and GCP</td><td>OpenSeesMP architecture, domain decomposition strategy, METIS graph partitioning algorithm, MPI communication patterns, GCP VM setup, SSH, storage, cost monitoring</td><td>Compile OpenSeesMP with MPI, partition a 3D model with METIS, deploy and run on GCP VM, retrieve and post-process distributed results</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+        <div class="footer-wrapper">
+            <footer class="footer">
+                &copy; 2026 Onur Deniz Akan. All rights reserved.
+            </footer>
+        </div>
+    </body>
+</html>

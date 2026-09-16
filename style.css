@@ -1254,3 +1254,38 @@ p {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* =========================================================
+   Side-by-side video comparison (research articles)
+   ========================================================= */
+.video-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 28px 0;
+}
+.video-compare figure { margin: 0; }
+.video-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.video-frame iframe {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border: 0;
+}
+.video-compare figcaption {
+  font-family: var(--sans);
+  font-size: .88rem;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: left;
+  margin-top: 8px;
+}
+@media (max-width: 700px) {
+  .video-compare { grid-template-columns: 1fr; }
+}
